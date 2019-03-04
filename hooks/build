@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+date
+
+echo
+echo "Build hook is running."
+echo "IMAGE_NAME=${IMAGE_NAME}"
+echo "CACHE_TAG=${CACHE_TAG:=}"
+echo
+
+# Remove index.docker.io/ prefix as it is added by default by DockerHub
+export LOCAL_IMAGE_NAME=${IMAGE_NAME#index.docker.io/}
+
+echo
+echo "LOCAL_IMAGE_NAME=${LOCAL_IMAGE_NAME}"
+echo
+
+cd ${MY_DIR}/..
+
+SKIP_CACHE=${SKIP_CACHE:=0}
+
+TEST_VERSION=${TEST_VERSION:=2.0.0-dev}
+
+EXTRAS=${EXTRAS:=all}
+
+PYTHON_VERSION=${LOCAL_IMAGE_NAME:(-3)}
+echo "Building ${TEST_VERSION} images for python version ${PYTHON_VERSION}"
+
+PYTHON_IMAGE=python:${PYTHON_VERSION}-slim
+
+# Push images. Enabled by default when for Docker Hub build.
+PUSH_IMAGES=${PUSH_IMAGES:=1}
+
+# Fix mtime for all files. Enabled by default for Docker Hub build.
+FIX_MTIME=${FIX_MTIME:=1}
+
+# In the future we can enable Docker buildkit
+# It's experimental now and cache does not work out of the box with buildkit in Docker 18.09.2, buildkit 0.3.3
+# It is fixed in upcoming buildkit 0.4.0
+
+export DOCKER_BUILDKIT=${DOCKER_BUILDKIT:=0}
+
+date
+
+set -x
+docker pull ${LOCAL_IMAGE_NAME}-v${TEST_VERSION} || true
+
+date
+
+# Docker uses mtime of file for calculating hashes With fresh clone mtime is set to current time
+# We are modifying mtime here to make caching more accurate when they are built on DockerHub and
+# later on Travis CI
+if [[ "${FIX_MTIME}" == "1" ]]; then
+    MTIME=201901010000.00
+    echo
+    echo "Fixing Mtime to ${MTIME}"
+    echo
+    find . -exec touch -ct ${MTIME} "{}" \; -exec echo "Mtime: ${MTIME} set for" "{}" \;
+
+    echo
+    echo "Stats/md5sum for all files:"
+    find . -not -path '*/\.*' -exec stat -t "{}" \; -exec md5sum "{}" \;
+    echo
+fi
+
+date
+
+function add_tag {
+    TAG=$1
+    TAGS="${TAGS} ${TAG}"
+    echo
+    echo "Adding TAG ${TAG} to push"
+    echo
+    echo
+    echo "List of tags to push now: '${TAGS}'"
+    echo
+}
+
+function build_image {
+    NAME=$1
+    MY_IMAGE_TAG=$2
+    DOCKERFILE=$3
+    BASE_IMAGE=$4
+    USER=$5
+
+    echo "Building ${NAME} image ${MY_IMAGE_TAG}. Dockerfile: ${DOCKERFILE}, base image ${BASE_IMAGE}"
+
+    if [[ "${SKIP_CACHE}" == "1" ]]; then
+        echo
+        echo "Cache is disabled for the whole build."
+        echo
+        CACHE_DIRECTIVE="--no-cache"
+    else
+        IMAGE_HASH=$(docker images -q ${MY_IMAGE_TAG} 2> /dev/null)
+        if [[ "${IMAGE_HASH}" == "" ]]; then
+            echo
+            echo "No image ${MY_IMAGE_TAG} locally available. Cache is disabled."
+            echo
+            CACHE_DIRECTIVE="--no-cache"
+        else
+            echo
+            echo "Image ${MY_IMAGE_TAG} is in local registry (${IMAGE_HASH}). Cache is enabled!"
+            echo
+            CACHE_DIRECTIVE="--cache-from ${MY_IMAGE_TAG}"
+        fi
+    fi
+
+    set -x
+    docker build \
+        --build-arg BASE_IMAGE=${BASE_IMAGE} \
+        --build-arg TEST_VERSION=${TEST_VERSION} \
+        --build-arg EXTRAS=${EXTRAS} \
+        --build-arg PYTHON_VERSION=${PYTHON_VERSION} \
+        ${CACHE_DIRECTIVE} \
+        -f ${DOCKERFILE} \
+        -t ${MY_IMAGE_TAG} \
+        .
+
+    add_tag ${MY_IMAGE_TAG}
+
+    set +x
+
+}
+
+TAGS=""
+
+
+date
+
+build_image "image" \
+            "${LOCAL_IMAGE_NAME}-v${TEST_VERSION}" \
+            "Dockerfile" \
+            "${PYTHON_IMAGE}" \
+            "root"
+
+date
+
+echo
+echo "Build finished"
+echo

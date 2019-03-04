@@ -1,0 +1,5 @@
+*.iml
+.eggs
+.github
+.git
+.idea
