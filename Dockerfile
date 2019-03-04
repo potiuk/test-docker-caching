@@ -23,7 +23,7 @@ RUN apt-get update \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY setup.cfg /opt/setup.cfg
-COPY setup.cfg /opt/setup.cfg
+COPY setup.py /opt/setup.py
 
 ARG PYTHON_VERSION
 ENV PYTHON_VERSION=${PYTHON_VERSION}
