@@ -143,7 +143,7 @@ if [[ "${PUSH_IMAGES}" != "0" ]]; then
     echo
     for TAG in "${TAGS}"
     do
-        docker push "${TAG}"
+        docker push ${TAG}
     done
 fi
 
