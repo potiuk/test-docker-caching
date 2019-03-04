@@ -58,7 +58,7 @@ if [[ "${FIX_MTIME}" == "1" ]]; then
     echo
     echo "Fixing Mtime to ${MTIME}"
     echo
-    find . -exec touch -ct ${MTIME} "{}" \; -exec echo "Mtime: ${MTIME} set for" "{}" \;
+    find . -not -path '*/\.*' -exec touch -ct ${MTIME} "{}" \; -exec echo "Mtime: ${MTIME} set for" "{}" \;
 
     echo
     echo "Stats/md5sum for all files:"
