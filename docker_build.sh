@@ -25,17 +25,12 @@ MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #                  publish under different dockerhub user
 # PUSH_IMAGES = defaults to 0 - no images are pushed, but you can set it to 1 to push images to dockerhub
 #               useful when you use your own DOCKERHUB_USER and push images for caching for your organization
-# FIX_MTIME = defaults to 0 - no mtime is fixed for any files, but you can set it to 1 to fix mtime to
-#             be always the same for all files this is useful for Docker build hash calculation - it takes
-#             into account mtime of files so if we want to have consistent caching on fresh clone we need
-#             to fix mtime on both DockerHub and TravisCI
 
 PYTHON_VERSION=${PYTHON_VERSION:=$(python -c 'import sys; print("%s.%s" % (sys.version_info.major, sys.version_info.minor))')}
 
 export DOCKERHUB_USER=${DOCKERHUB_USER:=potiuk}
 export IMAGE_NAME=${DOCKERHUB_USER}/test-docker-caching:latest-${PYTHON_VERSION}
 export PUSH_IMAGES=${PUSH_IMAGES:=0}
-export FIX_MTIME=${FIX_MTIME:=0}
 
 hooks/build
 

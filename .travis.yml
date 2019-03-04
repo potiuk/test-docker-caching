@@ -22,7 +22,6 @@ language: python
 env:
   global:
     - TEST_VERSION=2.0.0-dev
-    - FIX_MTIME=1 # Fix mtime for ./docker_build.sh for consistent hashing
 python:
   - "3.6"
 stages:

@@ -34,9 +34,6 @@ PYTHON_IMAGE=python:${PYTHON_VERSION}-slim
 # Push images. Enabled by default when for Docker Hub build.
 PUSH_IMAGES=${PUSH_IMAGES:=1}
 
-# Fix mtime for all files. Enabled by default for Docker Hub build.
-FIX_MTIME=${FIX_MTIME:=1}
-
 # In the future we can enable Docker buildkit
 # It's experimental now and cache does not work out of the box with buildkit in Docker 18.09.2, buildkit 0.3.3
 # It is fixed in upcoming buildkit 0.4.0
@@ -47,24 +44,6 @@ date
 
 set -x
 docker pull ${LOCAL_IMAGE_NAME}-v${TEST_VERSION} || true
-
-date
-
-# Docker uses mtime of file for calculating hashes With fresh clone mtime is set to current time
-# We are modifying mtime here to make caching more accurate when they are built on DockerHub and
-# later on Travis CI
-if [[ "${FIX_MTIME}" == "1" ]]; then
-    MTIME=201901010000.00
-    echo
-    echo "Fixing Mtime to ${MTIME}"
-    echo
-    find . -not -path '*/\.*' -exec touch -ct ${MTIME} "{}" \; -exec echo "Mtime: ${MTIME} set for" "{}" \;
-
-    echo
-    echo "Stats/md5sum for all files:"
-    find . -not -path '*/\.*' -exec stat -t "{}" \; -exec md5sum "{}" \;
-    echo
-fi
 
 date
 
