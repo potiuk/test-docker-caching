@@ -127,7 +127,6 @@ function build_image {
 
 TAGS=""
 
-
 date
 
 build_image "image" \
@@ -137,6 +136,16 @@ build_image "image" \
             "root"
 
 date
+
+if [[ "${PUSH_IMAGES}" != "0" ]]; then
+    echo
+    echo "Pushing tags: ${TAGS}"
+    echo
+    for TAG in "${TAGS}"
+    do
+        docker push "${TAG}"
+    done
+fi
 
 echo
 echo "Build finished"
